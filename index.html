@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SQL Path — Interactive Course</title>
+  <style>
+    :root {
+      --bg: #0c0f14;
+      --surface: #151b24;
+      --surface2: #1c2430;
+      --border: #2a3545;
+      --text: #e8edf4;
+      --muted: #8b9aaf;
+      --accent: #58cc02;
+      --accent-dim: #3d8f01;
+      --blue: #1cb0f6;
+      --blue-dim: #0e7cae;
+      --gold: #ffc800;
+      --err: #ff4b4b;
+      --mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: system-ui, Segoe UI, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    a { color: var(--blue); }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 280px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; max-height: 100vh; position: sticky; top: 0;
+    }
+    .sidebar-head { padding: 1rem 1rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .sidebar-head h1 { margin: 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+    .sidebar-head .sub { margin: 0.35rem 0 0; font-size: 0.78rem; color: var(--muted); }
+    .xp-bar { margin-top: 0.65rem; height: 8px; background: var(--surface2); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+    .xp-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); width: 0%; transition: width 0.35s ease; }
+    .xp-label { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 0.5rem 0 1rem; }
+    .unit { margin-top: 0.5rem; }
+    .unit-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 0.5rem 1rem 0.25rem; }
+    .lesson-btn {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left;
+      padding: 0.55rem 1rem; border: none; background: transparent; color: var(--text);
+      font: inherit; cursor: pointer; border-left: 3px solid transparent;
+    }
+    .lesson-btn:hover { background: var(--surface2); }
+    .lesson-btn.active { background: var(--surface2); border-left-color: var(--blue); }
+    .lesson-btn.locked { opacity: 0.45; cursor: not-allowed; }
+    .lesson-btn .idx { font-size: 0.75rem; color: var(--muted); width: 1.5rem; }
+    .lesson-btn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .lesson-btn.done .dot { background: var(--accent); box-shadow: 0 0 0 2px rgba(88,204,2,0.25); }
+    .lesson-btn .lbl { flex: 1; font-size: 0.88rem; }
+    .lesson-btn .tag { font-size: 0.62rem; text-transform: uppercase; color: var(--muted); }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { padding: 0.65rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .topbar h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+    .progress-track { flex: 1; max-width: 320px; height: 10px; background: var(--surface2); border-radius: 99px; border: 1px solid var(--border); overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--blue); width: 0%; transition: width 0.4s ease; }
+    .content { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 0; border-bottom: 1px solid var(--border); }
+    @media (max-width: 960px) { .content { grid-template-columns: 1fr; } .sidebar { display: none; } .sidebar.open { display: flex; position: fixed; z-index: 50; height: 100%; } }
+    .teach { padding: 1.25rem 1.5rem; overflow-y: auto; max-height: calc(100vh - 120px); border-right: 1px solid var(--border); background: #0f1318; }
+    .teach h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+    .teach h3 { margin: 1.25rem 0 0.5rem; font-size: 0.95rem; color: var(--blue); }
+    .teach p { margin: 0 0 0.85rem; color: #c5ced9; font-size: 0.92rem; }
+    .teach pre { margin: 0 0 1rem; padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 0.8rem; line-height: 1.4; color: #b8e0ff; }
+    .teach code { font-family: var(--mono); font-size: 0.86em; background: var(--surface2); padding: 0.1em 0.35em; border-radius: 4px; }
+    .teach ul { margin: 0 0 1rem; padding-left: 1.25rem; color: #c5ced9; font-size: 0.92rem; }
+    .callout { border-left: 4px solid var(--gold); padding: 0.65rem 0.85rem; background: rgba(255,200,0,0.08); border-radius: 0 8px 8px 0; margin-bottom: 1rem; font-size: 0.88rem; }
+    .workspace { display: flex; flex-direction: column; min-height: 420px; background: var(--bg); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    #sql-input { flex: 1; width: 100%; min-height: 200px; margin: 0; padding: 0.85rem; border: none; resize: vertical; font-family: var(--mono); font-size: 0.82rem; line-height: 1.45; background: var(--bg); color: var(--text); }
+    #sql-input:focus { outline: 2px solid var(--blue-dim); outline-offset: -2px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem 0.75rem; border-top: 1px solid var(--border); background: var(--surface); }
+    button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: #243044; color: var(--text); padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.82rem; }
+    button:hover { filter: brightness(1.08); }
+    button.primary { background: var(--blue-dim); border-color: var(--blue); color: #fff; font-weight: 600; }
+    button.success { background: var(--accent-dim); border-color: var(--accent); color: #fff; font-weight: 700; }
+    button.ghost { background: transparent; }
+    #output { flex: 1; overflow: auto; padding: 0.75rem; font-family: var(--mono); font-size: 0.76rem; min-height: 140px; max-height: 280px; border-top: 1px solid var(--border); }
+    .msg { padding: 0.55rem 0.75rem; border-radius: 8px; margin-bottom: 0.6rem; white-space: pre-wrap; word-break: break-word; font-family: system-ui, sans-serif; font-size: 0.85rem; }
+    .msg.ok { background: rgba(88,204,2,0.12); color: #9ee86a; border: 1px solid rgba(88,204,2,0.35); }
+    .msg.err { background: rgba(255,75,75,0.1); color: #ff8a8a; border: 1px solid rgba(255,75,75,0.35); }
+    .msg.info { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    table.result { border-collapse: collapse; width: 100%; margin-bottom: 0.75rem; font-size: 0.74rem; }
+    table.result th, table.result td { border: 1px solid var(--border); padding: 0.3rem 0.45rem; text-align: left; }
+    table.result th { background: var(--surface); color: var(--muted); }
+    .footer-actions { padding: 1rem 1.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; background: var(--surface); border-top: 1px solid var(--border); }
+    .footer-actions .spacer { flex: 1; }
+    #menu-toggle { display: none; }
+    @media (max-width: 960px) { #menu-toggle { display: inline-flex; } }
+    .toast { position: fixed; bottom: 1.25rem; right: 1.25rem; padding: 0.85rem 1.1rem; background: var(--accent-dim); color: #fff; font-weight: 700; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; animation: pop 0.35s ease; }
+    @keyframes pop { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .learn-only #workspace-panel { display: none; }
+    .learn-only .content { grid-template-columns: 1fr; }
+    .learn-only .teach { border-right: none; max-height: none; }
+    .project-final .teach .no-hint { color: var(--muted); font-style: italic; }
+    .lesson-btn .tag.challenge { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <h1>SQL Path</h1>
+        <p class="sub">Deep, slow-paced track — many practices per topic + a solo mini-lab at the end of each unit. SQLite in-browser (sql.js).</p>
+        <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+        <div class="xp-label" id="xp-label">0 XP</div>
+      </div>
+      <nav class="nav-scroll" id="nav"></nav>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <button type="button" class="ghost" id="menu-toggle">☰ Menu</button>
+        <h2 id="lesson-title">Loading…</h2>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <div class="content" id="content-grid">
+        <article class="teach" id="teach"></article>
+        <div class="workspace" id="workspace-panel">
+          <div class="panel-head"><span>Your SQL</span><span>Ctrl+Enter run · Shift+Ctrl+Enter check</span></div>
+          <textarea id="sql-input" spellcheck="false"></textarea>
+          <div class="toolbar">
+            <button type="button" class="primary" id="btn-run">Run</button>
+            <button type="button" class="success" id="btn-check">Check</button>
+            <button type="button" id="btn-reset-lesson">Reset lesson DB</button>
+            <button type="button" id="btn-clear">Clear editor</button>
+          </div>
+          <div class="panel-head"><span>Output</span><span id="status-dot">…</span></div>
+          <div id="output"></div>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <button type="button" class="primary" id="btn-continue" style="display:none">Continue</button>
+        <span class="spacer"></span>
+        <span style="font-size:0.75rem;color:var(--muted)" id="footer-hint"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sql.js@1.11.0/dist/sql-wasm.js"></script>
+  <script>
+(function () {
+  const PROGRESS_KEY = "sql-path-progress-v4";
+  const XP_PER = 10;
+
+  const el = {
+    nav: document.getElementById("nav"),
+    teach: document.getElementById("teach"),
+    input: document.getElementById("sql-input"),
+    output: document.getElementById("output"),
+    status: document.getElementById("status-dot"),
+    title: document.getElementById("lesson-title"),
+    progressFill: document.getElementById("progress-fill"),
+    xpFill: document.getElementById("xp-fill"),
+    xpLabel: document.getElementById("xp-label"),
+    btnRun: document.getElementById("btn-run"),
+    btnCheck: document.getElementById("btn-check"),
+    btnReset: document.getElementById("btn-reset-lesson"),
+    btnClear: document.getElementById("btn-clear"),
+    btnContinue: document.getElementById("btn-continue"),
+    contentGrid: document.getElementById("content-grid"),
+    workspace: document.getElementById("workspace-panel"),
+    footerHint: document.getElementById("footer-hint"),
+    sidebar: document.getElementById("sidebar"),
+    menuToggle: document.getElementById("menu-toggle"),
+  };
+
+  let SQL = null;
+  let lessonDb = null;
+  let currentLessonIndex = 0;
+  let progress = { done: {}, xp: 0, currentIndex: 0 };
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      if (raw) progress = JSON.parse(raw);
+    } catch (_) {}
+    if (!progress.done) progress.done = {};
+    if (typeof progress.xp !== "number") progress.xp = 0;
+    if (typeof progress.currentIndex !== "number") progress.currentIndex = 0;
+  }
+
+  function saveProgress() {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  }
+
+  function toast(msg) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  }
+
+  function normalizeCell(v) {
+    if (v === null || v === undefined) return "NULL";
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
+    return String(v);
+  }
+
+  function resultMatch(actual, expected, ignoreRowOrder) {
+    if (!actual || actual.length === 0) return expected.length === 0;
+    const a = actual[0];
+    const exp = expected[0];
+    if (!exp) return true;
+    if (JSON.stringify(a.columns) !== JSON.stringify(exp.columns)) return false;
+    const va = (a.values || []).map((r) => r.map(normalizeCell));
+    const ve = (exp.values || []).map((r) => r.map(normalizeCell));
+    if (va.length !== ve.length) return false;
+    if (ignoreRowOrder) {
+      const sa = va.map((r) => JSON.stringify(r)).sort();
+      const se = ve.map((r) => JSON.stringify(r)).sort();
+      return JSON.stringify(sa) === JSON.stringify(se);
+    }
+    return JSON.stringify(va) === JSON.stringify(ve);
+  }
+
+  function execAll(db, sql) {
+    return db.exec(sql);
+  }
+
+  function freshLessonDb(seedSql) {
+    if (lessonDb) try { lessonDb.close(); } catch (_) {}
+    lessonDb = new SQL.Database();
+    if (seedSql && seedSql.trim()) lessonDb.exec(seedSql);
+  }
+
+  function renderTable(block) {
+    if (!block || !block.columns || block.columns.length === 0) return "";
+    let h = "<table class='result'><thead><tr>";
+    for (const c of block.columns) h += "<th>" + escapeHtml(c) + "</th>";
+    h += "</tr></thead><tbody>";
+    for (const row of block.values || []) {
+      h += "<tr>";
+      for (const cell of row) h += "<td>" + escapeHtml(normalizeCell(cell)) + "</td>";
+      h += "</tr>";
+    }
+    return h + "</tbody></table>";
+  }
+
+  function appendOut(html) {
+    el.output.insertAdjacentHTML("beforeend", html);
+  }
+
+  function clearOut() {
+    el.output.innerHTML = "";
+  }
+
+  function setStatus(t) {
+    el.status.textContent = t;
+  }
+
+  const LESSONS = [];
+
+  function L(spec) {
+    LESSONS.push(spec);
+  }
+
+  /** For SELECT-only steps: run user SQL on seeded DB and compare to expectSql on same data. */
+  function checkSelect(seed, expectSql, ignoreOrder, failMsg) {
+    return function () {
+      const user = el.input.value.trim();
+      const d = new SQL.Database();
+      if (seed && seed.trim()) d.exec(seed);
+      let got;
+      try {
+        got = d.exec(user);
+      } catch (e) {
+        d.close();
+        return { ok: false, msg: e.message || String(e) };
+      }
+      let exp;
+      try {
+        exp = d.exec(expectSql);
+      } catch (e) {
+        d.close();
+        return { ok: false, msg: "Verification query failed internally." };
+      }
+      d.close();
+      if (!got.length) return { ok: false, msg: "Your query produced no result set." };
+      if (!resultMatch(got, exp, !!ignoreOrder))
+        return { ok: false, msg: failMsg || "Columns, rows, or order do not match the assignment." };
+      return { ok: true };
+    };
+  }
+
+  /* ——— Curriculum ——— */
+  L({ id: "intro", kind: "learn", title: "Welcome — how databases think", narrative: `
+<h2>Why SQL takes time to master</h2>
+<p>SQL looks small on paper, but it is a <em>different way of thinking</em> than writing loops in Python or JavaScript. You describe <strong>what</strong> you want the database to return or how rows should change, and the engine figures out <strong>how</strong> to do it efficiently.</p>
+<p>This track is intentionally <strong>slow</strong>: several reading steps and many small practices per idea, then a <strong>mini-lab</strong> at the end of each unit where you work alone with only a checklist — no solution nudges from the checker.</p>
+<h3>What is a relational database?</h3>
+<p>Data lives in <strong>tables</strong>. Each table has named <strong>columns</strong> (fields) and many <strong>rows</strong> (records). Tables can reference each other with <strong>keys</strong>, which keeps data consistent when applications grow.</p>
+<h3>SQLite here, SQL everywhere else</h3>
+<p>We use <strong>SQLite</strong> in your browser. Syntax is close to PostgreSQL and MySQL; minor differences (dates, some functions) exist, but <code>SELECT</code>, <code>JOIN</code>, <code>GROUP BY</code>, and keys work the same ideas everywhere.</p>
+<h3>How to use this site</h3>
+<ul>
+<li><strong>Learn</strong> — read carefully; press <strong>Continue</strong> when you are ready.</li>
+<li><strong>Practice</strong> — use <strong>Run</strong> freely; <strong>Check</strong> grades against the assignment (you may get specific hints).</li>
+<li><strong>Mini-lab</strong> — only requirements + pass/fail; treat it like a take-home exam for that unit.</li>
+</ul>
+<div class="callout">Use <strong>Reset lesson DB</strong> whenever your practice database drifts. <strong>Tab</strong> indents in the editor.</div>
+` });
+
+  L({ id: "learn-types", kind: "learn", title: "Types, NULL, and row integrity", narrative: `
+<h2>Column types (SQLite)</h2>
+<p>SQLite uses dynamic typing but still names types in <code>CREATE TABLE</code>: <code>INTEGER</code>, <code>REAL</code>, <code>TEXT</code>, <code>BLOB</code>. In practice: ids and counts are integers, money often <code>REAL</code> (or integers of cents in production), free text is <code>TEXT</code>.</p>
+<h3>NULL</h3>
+<p><code>NULL</code> means “unknown / not applicable.” It is <strong>not</strong> the same as zero or an empty string. Comparisons like <code>WHERE col = NULL</code> are wrong — use <code>IS NULL</code> or <code>IS NOT NULL</code>.</p>
+<h3>NOT NULL and defaults</h3>
+<p><code>NOT NULL</code> forbids missing values in that column. <code>DEFAULT</code> fills in a value when an insert omits the column — useful for timestamps or flags.</p>
+<pre>CREATE TABLE note (
+  id INTEGER PRIMARY KEY,
+  body TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);</pre>
+` });
+
+  L({ id: "learn-ddl", kind: "learn", title: "Designing tables with CREATE TABLE", narrative: `
+<h2>CREATE TABLE walkthrough</h2>
+<p>Every column has a name and a declared type. One column is usually the <strong>primary key</strong>: unique per row. In SQLite, <code>INTEGER PRIMARY KEY</code> often acts as an auto-incrementing row id.</p>
+<pre>CREATE TABLE album (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  artist TEXT NOT NULL,
+  year INTEGER
+);</pre>
+<h3>Naming</h3>
+<p>Use consistent plural or singular table names across a project. Column names are usually <code>snake_case</code>. Foreign keys often mirror the referenced table: <code>artist_id</code> referencing <code>artists(id)</code>.</p>
+<h3>Comments</h3>
+<p>SQL line comments start with <code>--</code>. Use them to leave notes in scripts you hand in for mini-labs.</p>
+` });
+
+  L({ id: "p-books", kind: "practice", title: "Practice: table books", narrative: `
+<h2>Task</h2>
+<p>From an empty database, create <code>books</code> with <code>id</code> integer primary key, <code>title</code> text not null, <code>pages</code> integer (nullable is fine).</p>
+`, seed: "", starter: "CREATE TABLE books (\n\n);\n", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='books'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Table books missing." };
+    const info = db.exec("PRAGMA table_info(books)");
+    const rows = info[0].values || [];
+    const byName = Object.fromEntries(rows.map((r) => [r[1], { type: String(r[2]).toUpperCase(), notnull: r[3], pk: r[5] }]));
+    if (!byName.id || byName.id.pk !== 1) return { ok: false, msg: "id should be primary key." };
+    if (!byName.title || byName.title.notnull !== 1) return { ok: false, msg: "title should be NOT NULL." };
+    if (!byName.pages || !byName.pages.type.includes("INT")) return { ok: false, msg: "pages should be an integer type." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-products", kind: "practice", title: "Practice: table products", narrative: `
+<h2>Task</h2>
+<p>Create <code>products</code>: <code>sku</code> text primary key, <code>name</code> text not null, <code>price</code> real not null, <code>stock</code> integer not null default 0 (SQLite: <code>DEFAULT 0</code>).</p>
+`, seed: "", starter: "CREATE TABLE products (\n\n);\n", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='products'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Table products missing." };
+    const info = db.exec("PRAGMA table_info(products)");
+    const rows = info[0].values || [];
+    const by = Object.fromEntries(rows.map((r) => [r[1], { type: String(r[2]).toUpperCase(), notnull: r[3], dflt: r[4], pk: r[5] }]));
+    if (!by.sku || by.sku.pk !== 1) return { ok: false, msg: "sku should be the primary key." };
+    if (!by.name || by.name.notnull !== 1) return { ok: false, msg: "name NOT NULL required." };
+    if (!by.price || by.price.notnull !== 1 || !by.price.type.includes("REAL") && !by.price.type.includes("FLO") && !by.price.type.includes("NUM")) return { ok: false, msg: "price should be REAL NOT NULL." };
+    if (!by.stock || by.stock.notnull !== 1) return { ok: false, msg: "stock INTEGER NOT NULL required." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-seed-insert", kind: "practice", title: "Practice: insert three rows", narrative: `
+<h2>Task</h2>
+<p>The seed creates empty table <code>band_member</code> (<code>id</code> integer PK, <code>name</code> text not null). Insert <strong>exactly three</strong> rows with distinct names of your choice. Your script may only use inserts (no extra DDL).</p>
+`, seed: "CREATE TABLE band_member (id INTEGER PRIMARY KEY, name TEXT NOT NULL);", starter: "INSERT INTO band_member (name) VALUES ('...');\n", validate(db) {
+    const c = db.exec("SELECT COUNT(*) FROM band_member")[0].values[0][0];
+    if (c !== 3) return { ok: false, msg: "Need exactly 3 rows in band_member." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-select-warmup", kind: "practice", title: "Practice: first SELECTs", narrative: `
+<h2>Task</h2>
+<p>Seeded table <code>scores</code> (<code>player</code>, <code>points</code>). Write <strong>one</strong> <code>SELECT</code> returning columns <code>player</code> and <code>points</code> for rows where <code>points &gt;= 10</code>, ordered by <code>points</code> descending, then <code>player</code> ascending.</p>
+`, seed: "CREATE TABLE scores (player TEXT, points INTEGER); INSERT INTO scores VALUES ('Ann',12),('Ben',9),('Cam',15),('Dan',12);",
+    starter: "SELECT player, points\nFROM scores\n",
+    validate: checkSelect(
+      "CREATE TABLE scores (player TEXT, points INTEGER); INSERT INTO scores VALUES ('Ann',12),('Ben',9),('Cam',15),('Dan',12);",
+      "SELECT player, points FROM scores WHERE points >= 10 ORDER BY points DESC, player ASC",
+      false,
+      "Expected Cam, Dan, Ann in that order with correct points."
+    ) });
+
+  L({ id: "ch1", kind: "challenge", title: "Mini-lab: reading list (solo)", narrative: `
+<h2>Unit 1 mini-lab — no extra hints</h2>
+<p class="no-hint">Work from an empty database. Meet <strong>all</strong> requirements; the checker only reports pass/fail.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li><code>PRAGMA foreign_keys = ON;</code> at the top.</li>
+<li>Table <code>genres</code>: <code>id</code> integer PK, <code>name</code> text not null unique.</li>
+<li>Table <code>books</code>: <code>id</code> integer PK, <code>title</code> text not null, <code>year</code> integer, <code>genre_id</code> integer not null references <code>genres(id)</code>.</li>
+<li>At least <strong>3</strong> genres and <strong>6</strong> books; every genre must appear in at least one book.</li>
+<li>View <code>v_lab_books</code> with columns <code>title</code>, <code>genre_name</code> (genre’s name), rows for all books, ordered by <code>title</code> ascending.</li>
+<li>Entire script runs without errors.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    for (const n of ["genres", "books"]) {
+      const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" + n + "'");
+      if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    }
+    const fk = db.exec("PRAGMA foreign_key_list(books)");
+    if (!fk.length || !fk[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const g = db.exec("SELECT COUNT(*) FROM genres")[0].values[0][0];
+    const b = db.exec("SELECT COUNT(*) FROM books")[0].values[0][0];
+    if (g < 3 || b < 6) return { ok: false, msg: "Mini-lab check failed." };
+    const orphan = db.exec(
+      "SELECT COUNT(*) FROM genres x WHERE NOT EXISTS (SELECT 1 FROM books bk WHERE bk.genre_id = x.id)"
+    )[0].values[0][0];
+    if (orphan > 0) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_lab_books'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT b.title AS title, g.name AS genre_name FROM books b JOIN genres g ON g.id = b.genre_id ORDER BY b.title"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT title, genre_name FROM v_lab_books ORDER BY title");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-select-where", kind: "learn", title: "SELECT and WHERE in depth", narrative: `
+<h2>Thinking in sets</h2>
+<p><code>SELECT</code> produces a <strong>result set</strong>: a temporary table of rows and columns. <code>WHERE</code> filters <em>before</em> projection; only rows that pass the predicate survive.</p>
+<h3>Combining predicates</h3>
+<p>Use <code>AND</code>, <code>OR</code>, and parentheses. Without parentheses, <code>AND</code> binds tighter than <code>OR</code> — when in doubt, parenthesize.</p>
+<h3>IN, BETWEEN, LIKE</h3>
+<ul>
+<li><code>status IN ('open','pending')</code></li>
+<li><code>price BETWEEN 10 AND 20</code> — inclusive endpoints.</li>
+<li><code>name LIKE 'A%'</code> — <code>%</code> wildcard; <code>_</code> single char. Case sensitivity depends on collation (SQLite’s default is case-insensitive for ASCII letters in LIKE).</li>
+</ul>
+<h3>Escaping mistakes</h3>
+<p>String literals use single quotes. Double quotes are for identifiers in SQLite — avoid mixing them up.</p>
+` });
+
+  L({ id: "p-filter-cols", kind: "practice", title: "Practice: columns & IN", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>orders</code> (<code>id</code>, <code>customer</code>, <code>status</code>, <code>total</code>). One <code>SELECT</code>: columns <code>customer</code>, <code>total</code> where <code>status</code> is <code>'paid'</code> or <code>'shipped'</code> (use <code>IN</code>), order by <code>total</code> desc.</p>
+`, seed: `CREATE TABLE orders (id INTEGER, customer TEXT, status TEXT, total REAL);
+INSERT INTO orders VALUES (1,'A','paid',40),(2,'B','new',10),(3,'C','shipped',25),(4,'D','paid',15);`,
+    starter: "SELECT customer, total\nFROM orders\n",
+    validate: checkSelect(
+      `CREATE TABLE orders (id INTEGER, customer TEXT, status TEXT, total REAL);
+INSERT INTO orders VALUES (1,'A','paid',40),(2,'B','new',10),(3,'C','shipped',25),(4,'D','paid',15);`,
+      "SELECT customer, total FROM orders WHERE status IN ('paid','shipped') ORDER BY total DESC",
+      false,
+      "Expect A/40, C/25, D/15."
+    ) });
+
+  L({ id: "p-filter-between", kind: "practice", title: "Practice: BETWEEN and AND", narrative: `
+<h2>Task</h2>
+<p>Table <code>readings</code> seeded. Select <code>sensor</code> and <code>temp</code> where <code>temp</code> is between 20 and 30 inclusive <strong>and</strong> <code>sensor</code> is not <code>'X'</code>, ordered by <code>temp</code> ascending.</p>
+`, seed: `CREATE TABLE readings (sensor TEXT, temp REAL);
+INSERT INTO readings VALUES ('X',22),('Y',19),('Y',25),('Z',30),('Z',31);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE readings (sensor TEXT, temp REAL);
+INSERT INTO readings VALUES ('X',22),('Y',19),('Y',25),('Z',30),('Z',31);`,
+      "SELECT sensor, temp FROM readings WHERE temp BETWEEN 20 AND 30 AND sensor != 'X' ORDER BY temp ASC",
+      false,
+      "Rows Y/25 and Z/30 only, in that order."
+    ) });
+
+  L({ id: "p-filter-like", kind: "practice", title: "Practice: LIKE pattern", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>files</code> (<code>path</code>). Select <code>path</code> where path starts with <code>'/data/'</code> and ends with <code>'.log'</code> (use two LIKE conditions with AND), order by <code>path</code>.</p>
+`, seed: `CREATE TABLE files (path TEXT);
+INSERT INTO files VALUES ('/data/a.log'),('/tmp/a.log'),('/data/b.txt'),('/data/c.log');`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE files (path TEXT);
+INSERT INTO files VALUES ('/data/a.log'),('/tmp/a.log'),('/data/b.txt'),('/data/c.log');`,
+      "SELECT path FROM files WHERE path LIKE '/data/%' AND path LIKE '%.log' ORDER BY path",
+      false,
+      "Expect /data/a.log and /data/c.log."
+    ) });
+
+  L({ id: "ch2", kind: "challenge", title: "Mini-lab: ticket filters (solo)", narrative: `
+<h2>Unit 2 mini-lab</h2>
+<p class="no-hint">Empty database. Pass/fail only.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Create <code>tickets</code>: <code>id</code> integer PK, <code>code</code> text not null unique, <code>priority</code> integer not null, <code>topic</code> text not null.</li>
+<li>Insert at least <strong>8</strong> rows. At least three must have <code>priority</code> 1; at least two with <code>topic</code> exactly <code>'billing'</code>.</li>
+<li>Create view <code>v_hot_billing</code> listing <code>code</code> for tickets where <code>priority</code> is 1 <strong>and</strong> <code>topic</code> is <code>'billing'</code>, ordered by <code>code</code>.</li>
+<li>Script runs without errors.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='tickets'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const n = db.exec("SELECT COUNT(*) FROM tickets")[0].values[0][0];
+    if (n < 8) return { ok: false, msg: "Mini-lab check failed." };
+    const p1 = db.exec("SELECT COUNT(*) FROM tickets WHERE priority = 1")[0].values[0][0];
+    const bill = db.exec("SELECT COUNT(*) FROM tickets WHERE topic = 'billing'")[0].values[0][0];
+    if (p1 < 3 || bill < 2) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_hot_billing'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT code FROM tickets WHERE priority = 1 AND topic = 'billing' ORDER BY code"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT code FROM v_hot_billing ORDER BY code");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-order-null", kind: "learn", title: "ORDER BY, LIMIT, DISTINCT, NULL", narrative: `
+<h2>Sorting</h2>
+<p><code>ORDER BY col DESC</code> sorts descending; multiple keys read left to right. <code>NULL</code> sort order is engine-specific — in SQLite, by default NULLs sort first in ASC and last in DESC for built-in order.</p>
+<h2>LIMIT / OFFSET</h2>
+<p><code>LIMIT n OFFSET m</code> skips <code>m</code> rows then returns up to <code>n</code> — classic pagination (page size + page index × size).</p>
+<h2>DISTINCT</h2>
+<p><code>SELECT DISTINCT col</code> deduplicates result rows — handy for “which values appear at least once?”</p>
+` });
+
+  L({ id: "p-order-page", kind: "practice", title: "Practice: page of rows", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>items</code> (<code>id</code>, <code>label</code>). Return <code>id</code>, <code>label</code> ordered by <code>id</code> ascending. Skip the first <strong>2</strong> rows, then return the next <strong>2</strong> (third and fourth rows).</p>
+`, seed: `CREATE TABLE items (id INTEGER, label TEXT);
+INSERT INTO items VALUES (10,'a'),(20,'b'),(30,'c'),(40,'d'),(50,'e');`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE items (id INTEGER, label TEXT);
+INSERT INTO items VALUES (10,'a'),(20,'b'),(30,'c'),(40,'d'),(50,'e');`,
+      "SELECT id, label FROM items ORDER BY id ASC LIMIT 2 OFFSET 2",
+      false,
+      "Expect rows 30/c and 40/d."
+    ) });
+
+  L({ id: "p-distinct-null", kind: "practice", title: "Practice: DISTINCT & NULL", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>tags</code> (<code>tag</code>). Select <strong>distinct</strong> <code>tag</code> where <code>tag</code> is not null, ordered by <code>tag</code> ascending.</p>
+`, seed: `CREATE TABLE tags (tag TEXT);
+INSERT INTO tags VALUES ('sql'),('sql'),(NULL),('api'),(NULL),('api');`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE tags (tag TEXT);
+INSERT INTO tags VALUES ('sql'),('sql'),(NULL),('api'),(NULL),('api');`,
+      "SELECT DISTINCT tag FROM tags WHERE tag IS NOT NULL ORDER BY tag ASC",
+      false,
+      "Expect api, sql."
+    ) });
+
+  L({ id: "ch3", kind: "challenge", title: "Mini-lab: ranked backlog (solo)", narrative: `
+<h2>Unit 3 mini-lab</h2>
+<p class="no-hint">Empty DB. Checklist only.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>tasks</code>: <code>id</code> integer PK, <code>title</code> text not null, <code>score</code> integer not null, <code>bucket</code> text not null.</li>
+<li>Insert at least <strong>10</strong> tasks across at least <strong>2</strong> distinct <code>bucket</code> values.</li>
+<li>View <code>v_top_three</code>: columns <code>title</code>, <code>score</code> — the <strong>three</strong> tasks with highest <code>score</code> globally; ties broken by <code>title</code> ascending. (Same rows as <code>ORDER BY score DESC, title ASC LIMIT 3</code> on <code>tasks</code>.)</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM tasks")[0].values[0][0] < 10) return { ok: false, msg: "Mini-lab check failed." };
+    const buckets = db.exec("SELECT COUNT(DISTINCT bucket) FROM tasks")[0].values[0][0];
+    if (buckets < 2) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_top_three'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec("SELECT title, score FROM tasks ORDER BY score DESC, title ASC LIMIT 3");
+    let got;
+    try {
+      got = db.exec("SELECT title, score FROM v_top_three ORDER BY score DESC, title ASC");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-dml", kind: "learn", title: "INSERT, UPDATE, DELETE — workflows", narrative: `
+<h2>Safe patterns</h2>
+<p>Wrap destructive steps in transactions in real apps (<code>BEGIN;</code> … <code>COMMIT;</code>). Always constrain <code>UPDATE</code> and <code>DELETE</code> with a <code>WHERE</code> that identifies intended rows — run a <code>SELECT</code> with the same predicate first.</p>
+<h2>Insert forms</h2>
+<pre>INSERT INTO t (a,b) VALUES (1,'x'), (2,'y');
+INSERT INTO archive SELECT * FROM staging WHERE processed = 1;</pre>
+<p>The second form copies rows from a query — powerful for ETL-style steps.</p>
+` });
+
+  L({ id: "p-mutate-chain", kind: "practice", title: "Practice: insert, update, delete chain", narrative: `
+<h2>Task</h2>
+<p>Seed: <code>stock</code> (<code>sku</code> text PK, <code>qty</code> int). Insert <code>NEW</code> with qty 4. Set every row with sku <code>OLD</code> to qty 0. Delete rows with qty 0. End with <code>SELECT * FROM stock ORDER BY sku;</code> in your script (checker uses final table state).</p>
+`, seed: "CREATE TABLE stock (sku TEXT PRIMARY KEY, qty INTEGER); INSERT INTO stock VALUES ('OLD',2),('KEEP',5);",
+    starter: "",
+    validate(db) {
+      const r = db.exec("SELECT sku, qty FROM stock ORDER BY sku");
+      const exp = { columns: ["sku", "qty"], values: [["KEEP", 5], ["NEW", 4]] };
+      if (!resultMatch(r, [exp], false)) return { ok: false, msg: "Final stock should be KEEP/5 and NEW/4 only." };
+      return { ok: true };
+    } });
+
+  L({ id: "p-insert-select", kind: "practice", title: "Practice: INSERT…SELECT", narrative: `
+<h2>Task</h2>
+<p>Seed creates <code>src</code> and empty <code>dest</code> same shape (<code>id</code>, <code>val</code>). Insert into <code>dest</code> all rows from <code>src</code> where <code>val &gt; 0</code>. Do not insert ids manually — let them auto-fill if you use nullable id or specify columns without id.</p>
+<p>Tables: <code>src(id INTEGER PRIMARY KEY, val INTEGER)</code>, <code>dest(id INTEGER PRIMARY KEY, val INTEGER)</code>.</p>
+`, seed: `CREATE TABLE src (id INTEGER PRIMARY KEY, val INTEGER);
+CREATE TABLE dest (id INTEGER PRIMARY KEY, val INTEGER);
+INSERT INTO src VALUES (1,-1),(2,3),(3,5);`,
+    starter: "INSERT INTO dest (val)\nSELECT ...\n",
+    validate(db) {
+      const r = db.exec("SELECT val FROM dest ORDER BY val");
+      const exp = { columns: ["val"], values: [[3], [5]] };
+      if (!resultMatch(r, [exp], false)) return { ok: false, msg: "dest should contain val 3 and 5 only." };
+      return { ok: true };
+    } });
+
+  L({ id: "ch4", kind: "challenge", title: "Mini-lab: warehouse moves (solo)", narrative: `
+<h2>Unit 4 mini-lab</h2>
+<p class="no-hint">Empty database.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>bins</code>: <code>code</code> text PK, <code>qty</code> integer not null.</li>
+<li>Insert bins <code>A1</code> qty 10, <code>B2</code> qty 4, <code>C3</code> qty 0.</li>
+<li>Increase <code>A1</code> by 5 and <code>B2</code> by 1 using <code>UPDATE</code>.</li>
+<li>Delete any bin with <code>qty = 0</code>.</li>
+<li>Table <code>audit</code>: <code>note</code> text — insert one row with note <code>'done'</code>.</li>
+<li>Final state: exactly two bins (A1=15, B2=5) and one audit row.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const bins = db.exec("SELECT code, qty FROM bins ORDER BY code");
+    const exp = { columns: ["code", "qty"], values: [["A1", 15], ["B2", 5]] };
+    if (!resultMatch(bins, [exp], false)) return { ok: false, msg: "Mini-lab check failed." };
+    const ac = db.exec("SELECT COUNT(*) FROM audit WHERE note = 'done'")[0].values[0][0];
+    if (ac !== 1) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-keys", kind: "learn", title: "Keys, FKs, and composite primary keys", narrative: `
+<h2>Why keys matter</h2>
+<p>Primary keys give each row a stable identity. Foreign keys document and enforce “this value must exist over there,” preventing orphan rows when applications forget to clean up.</p>
+<h2>Composite keys</h2>
+<p>Sometimes two columns together identify a row — e.g. line items: (<code>order_id</code>, <code>line_no</code>). Declare both as primary key columns in SQLite.</p>
+<h2>SQLite FK pragma</h2>
+<p>Foreign keys only enforce when <code>PRAGMA foreign_keys = ON;</code> is active for the connection — we enable it for checks in this course.</p>
+` });
+
+  L({ id: "p-fk-orders", kind: "practice", title: "Practice: customers & orders", narrative: `
+<h2>Task</h2>
+<p>Empty DB with FKs on. Create <code>customers</code> (<code>id</code> integer PK, <code>name</code> text not null) and <code>orders</code> (<code>id</code> integer PK, <code>customer_id</code> integer not null references customers, <code>note</code> text). Insert customer 1 / <code>Ada</code> and order 99 for that customer with note <code>x</code>.</p>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n", validate(db) {
+    const fk = db.exec("PRAGMA foreign_key_list(orders)");
+    if (!fk.length || !fk[0].values.length) return { ok: false, msg: "Missing FK on orders." };
+    const r = db.exec("SELECT o.id, c.name, o.note FROM orders o JOIN customers c ON c.id = o.customer_id");
+    const exp = { columns: ["id", "name", "note"], values: [[99, "Ada", "x"]] };
+    if (!resultMatch(r, [exp], false)) return { ok: false, msg: "Data or join mismatch." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-composite", kind: "practice", title: "Practice: composite primary key", narrative: `
+<h2>Task</h2>
+<p>Create <code>pair</code> with composite PK (<code>a</code> integer, <code>b</code> integer) and column <code>label</code> text. Insert rows (1,1,'x') and (1,2,'y'). Attempting a duplicate (1,1,'z') would violate PK — you don’t need to test that here.</p>
+`, seed: "", starter: "", validate(db) {
+    const info = db.exec("PRAGMA table_info(pair)");
+    const rows = info[0].values || [];
+    const pkc = rows.filter((r) => r[5] > 0);
+    if (pkc.length < 2) return { ok: false, msg: "Need composite primary key on (a,b)." };
+    const c = db.exec("SELECT COUNT(*) FROM pair")[0].values[0][0];
+    if (c !== 2) return { ok: false, msg: "Need exactly two rows." };
+    return { ok: true };
+  } });
+
+  L({ id: "ch5", kind: "challenge", title: "Mini-lab: workshop schema (solo)", narrative: `
+<h2>Unit 5 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li><code>PRAGMA foreign_keys = ON;</code></li>
+<li><code>suppliers</code>: <code>id</code> integer PK, <code>name</code> text not null.</li>
+<li><code>parts</code>: <code>id</code> integer PK, <code>name</code> text not null, <code>supplier_id</code> integer not null references <code>suppliers(id)</code>.</li>
+<li>At least <strong>2</strong> suppliers and <strong>5</strong> parts; each supplier has at least one part.</li>
+<li>View <code>v_part_list</code>: columns <code>part_name</code>, <code>supplier_name</code> — join, ordered by <code>part_name</code>.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    for (const n of ["suppliers", "parts"]) {
+      const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" + n + "'");
+      if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    }
+    const fk = db.exec("PRAGMA foreign_key_list(parts)");
+    if (!fk.length || !fk[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM suppliers")[0].values[0][0] < 2) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM parts")[0].values[0][0] < 5) return { ok: false, msg: "Mini-lab check failed." };
+    const orphan = db.exec(
+      "SELECT COUNT(*) FROM suppliers s WHERE NOT EXISTS (SELECT 1 FROM parts p WHERE p.supplier_id = s.id)"
+    )[0].values[0][0];
+    if (orphan > 0) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_part_list'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT pt.name AS part_name, s.name AS supplier_name FROM parts pt JOIN suppliers s ON s.id = pt.supplier_id ORDER BY part_name"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT part_name, supplier_name FROM v_part_list ORDER BY part_name");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-joins", kind: "learn", title: "JOINs: matching rows across tables", narrative: `
+<h2>INNER JOIN</h2>
+<p>Keeps only combinations where the <code>ON</code> predicate holds. This is the default join for “show me related data.”</p>
+<h2>LEFT OUTER JOIN</h2>
+<p>Keeps every row from the left table; right side columns become NULL when no match. Use this for “all X, even those without Y.”</p>
+<h2>Aliases</h2>
+<p>Short aliases (<code>FROM orders o</code>) keep queries readable when many tables appear.</p>
+<h2>SQLite note</h2>
+<p>SQLite has no <code>RIGHT JOIN</code>; swap table order with <code>LEFT JOIN</code> instead.</p>
+` });
+
+  L({ id: "p-inner-join", kind: "practice", title: "Practice: inner join", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>authors</code> and <code>books</code>. One query: columns <code>author_name</code>, <code>book_title</code> for every book, order by author then title.</p>
+`, seed: `
+CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+CREATE TABLE books (id INTEGER PRIMARY KEY, title TEXT NOT NULL, author_id INTEGER REFERENCES authors(id));
+INSERT INTO authors VALUES (1, 'Zed'), (2, 'Amy');
+INSERT INTO books VALUES (1, 'Alpha', 2), (2, 'Beta', 2), (3, 'Gamma', 1);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+CREATE TABLE books (id INTEGER PRIMARY KEY, title TEXT NOT NULL, author_id INTEGER REFERENCES authors(id));
+INSERT INTO authors VALUES (1, 'Zed'), (2, 'Amy');
+INSERT INTO books VALUES (1, 'Alpha', 2), (2, 'Beta', 2), (3, 'Gamma', 1);`,
+      "SELECT a.name AS author_name, b.title AS book_title FROM books b JOIN authors a ON a.id = b.author_id ORDER BY a.name, b.title",
+      false,
+      "Join/order mismatch."
+    ) });
+
+  L({ id: "p-left-join", kind: "practice", title: "Practice: left join anti-pattern", narrative: `
+<h2>Task</h2>
+<p>Same author/book seed. One <code>SELECT</code> returning column <code>name</code> for authors with <strong>no</strong> books (exactly Zed).</p>
+`, seed: `
+CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+CREATE TABLE books (id INTEGER PRIMARY KEY, title TEXT NOT NULL, author_id INTEGER REFERENCES authors(id));
+INSERT INTO authors VALUES (1, 'Zed'), (2, 'Amy');
+INSERT INTO books VALUES (1, 'Alpha', 2), (2, 'Beta', 2), (3, 'Gamma', 1);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+CREATE TABLE books (id INTEGER PRIMARY KEY, title TEXT NOT NULL, author_id INTEGER REFERENCES authors(id));
+INSERT INTO authors VALUES (1, 'Zed'), (2, 'Amy');
+INSERT INTO books VALUES (1, 'Alpha', 2), (2, 'Beta', 2), (3, 'Gamma', 1);`,
+      "SELECT a.name FROM authors a LEFT JOIN books b ON b.author_id = a.id WHERE b.id IS NULL",
+      true,
+      "Should list only Zed."
+    ) });
+
+  L({ id: "p-join-agg", kind: "practice", title: "Practice: join + count", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>customers</code> and <code>orders</code>. Return <code>name</code> and <code>n</code> (count of orders per customer) for customers who have orders, descending by <code>n</code>, then name.</p>
+`, seed: `
+CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id));
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben'),(3,'Cam');
+INSERT INTO orders VALUES (1,1),(2,1),(3,2),(4,2),(5,2);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id));
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben'),(3,'Cam');
+INSERT INTO orders VALUES (1,1),(2,1),(3,2),(4,2),(5,2);`,
+      "SELECT c.name AS name, COUNT(o.id) AS n FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.id, c.name ORDER BY n DESC, name",
+      false,
+      "Ben 3, Ann 2."
+    ) });
+
+  L({ id: "ch6", kind: "challenge", title: "Mini-lab: event RSVPs (solo)", narrative: `
+<h2>Unit 6 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li><code>events</code>: <code>id</code> integer PK, <code>title</code> text not null.</li>
+<li><code>people</code>: <code>id</code> integer PK, <code>handle</code> text not null unique.</li>
+<li><code>rsvps</code>: <code>event_id</code> references events, <code>person_id</code> references people, <code>status</code> text not null, primary key <code>(event_id, person_id)</code>.</li>
+<li>At least <strong>3</strong> events, <strong>4</strong> people, <strong>6</strong> RSVPs.</li>
+<li>View <code>v_yes_counts</code>: columns <code>title</code>, <code>yes_count</code> — per event, count RSVPs where <code>status</code> is exactly <code>'yes'</code>, only events with at least one yes, ordered by <code>yes_count</code> desc then <code>title</code>.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    for (const n of ["events", "people", "rsvps"]) {
+      const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" + n + "'");
+      if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    }
+    const pk = db.exec("PRAGMA table_info(rsvps)");
+    const pkc = (pk[0].values || []).filter((r) => r[5] > 0);
+    if (pkc.length < 2) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM events")[0].values[0][0] < 3) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM people")[0].values[0][0] < 4) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM rsvps")[0].values[0][0] < 6) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_yes_counts'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(`
+SELECT e.title AS title, COUNT(*) AS yes_count
+FROM events e
+JOIN rsvps r ON r.event_id = e.id
+WHERE r.status = 'yes'
+GROUP BY e.id, e.title
+HAVING COUNT(*) >= 1
+ORDER BY yes_count DESC, title
+`);
+    let got;
+    try {
+      got = db.exec("SELECT title, yes_count FROM v_yes_counts ORDER BY yes_count DESC, title");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-agg", kind: "learn", title: "Aggregates, GROUP BY, HAVING", narrative: `
+<h2>Aggregate functions</h2>
+<p><code>COUNT(*)</code> counts rows; <code>COUNT(col)</code> counts non-null values. <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code> summarize numeric or comparable data.</p>
+<h2>GROUP BY</h2>
+<p>Put non-aggregated columns from the <code>SELECT</code> list into <code>GROUP BY</code>. Each group becomes one output row.</p>
+<h2>HAVING</h2>
+<p>Filters groups after aggregation — e.g. “only customers with more than two orders.” Cannot reference SELECT aliases in all engines; SQLite allows some alias use in <code>HAVING</code> in recent versions, but repeating the expression is safest in homework.</p>
+` });
+
+  L({ id: "p-group-having", kind: "practice", title: "Practice: GROUP BY + HAVING", narrative: `
+<h2>Task</h2>
+<p>Same customer/order seed as join+count lesson (re-seeded here). List <code>name</code> for customers with <strong>more than one</strong> order, ordered by name.</p>
+`, seed: `
+CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id));
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben'),(3,'Cam');
+INSERT INTO orders VALUES (1,1),(2,1),(3,2),(4,2),(5,2);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id));
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben'),(3,'Cam');
+INSERT INTO orders VALUES (1,1),(2,1),(3,2),(4,2),(5,2);`,
+      "SELECT c.name FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.id, c.name HAVING COUNT(o.id) > 1 ORDER BY c.name",
+      false,
+      "Ann and Ben only."
+    ) });
+
+  L({ id: "p-sum-filter", kind: "practice", title: "Practice: SUM with filter", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>sales</code> (<code>region</code>, <code>amount</code>). Return columns <code>region</code> and <code>total</code> (sum of <code>amount</code>) per region, keeping only groups with sum <strong>&gt;= 100</strong>, ordered by <code>total</code> descending.</p>
+`, seed: `CREATE TABLE sales (region TEXT, amount REAL);
+INSERT INTO sales VALUES ('E',40),('E',80),('W',30),('W',70),('N',20);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE sales (region TEXT, amount REAL);
+INSERT INTO sales VALUES ('E',40),('E',80),('W',30),('W',70),('N',20);`,
+      "SELECT region, SUM(amount) AS total FROM sales GROUP BY region HAVING SUM(amount) >= 100 ORDER BY total DESC",
+      false,
+      "Expect E/120 then W/100."
+    ) });
+
+  L({ id: "ch7", kind: "challenge", title: "Mini-lab: revenue rollup (solo)", narrative: `
+<h2>Unit 7 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>invoices</code>: <code>id</code> integer PK, <code>dept</code> text not null, <code>amt</code> real not null.</li>
+<li>Insert at least <strong>8</strong> invoices across <strong>at least 3</strong> distinct <code>dept</code> values.</li>
+<li>View <code>v_dept_totals</code>: columns <code>dept</code>, <code>revenue</code> where <code>revenue</code> is the sum of <code>amt</code> per dept, ordered by <code>revenue</code> descending then <code>dept</code>.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM invoices")[0].values[0][0] < 8) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(DISTINCT dept) FROM invoices")[0].values[0][0] < 3) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_dept_totals'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT dept, SUM(amt) AS revenue FROM invoices GROUP BY dept ORDER BY revenue DESC, dept"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT dept, revenue FROM v_dept_totals ORDER BY revenue DESC, dept");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-subquery", kind: "learn", title: "Subqueries, EXISTS, and WITH (CTE)", narrative: `
+<h2>Subqueries in WHERE</h2>
+<p><code>WHERE id IN (SELECT …)</code> filters by a set produced dynamically. Correlated subqueries reference outer tables and run conceptually per outer row — powerful but easy to make slow on huge data.</p>
+<h2>EXISTS</h2>
+<p><code>WHERE EXISTS (SELECT 1 FROM … WHERE …)</code> stops at first match; idiomatic for “is there any related row?”</p>
+<h2>Common Table Expressions</h2>
+<pre>WITH big AS (SELECT * FROM sales WHERE amount > 100)
+SELECT customer_id, SUM(amount) FROM big GROUP BY customer_id;</pre>
+<p>CTEs make multi-step logic readable and can be recursive in SQLite for trees — advanced topic for later.</p>
+` });
+
+  L({ id: "p-sub-in", kind: "practice", title: "Practice: IN subquery", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>regions</code> and <code>stores</code>. Select <code>name</code> of stores whose <code>region_id</code> is in regions with code <code>'W'</code> or <code>'E'</code>, ordered by name. Use <code>IN (SELECT …)</code>.</p>
+`, seed: `
+CREATE TABLE regions (id INTEGER PRIMARY KEY, code TEXT);
+CREATE TABLE stores (id INTEGER PRIMARY KEY, name TEXT, region_id INTEGER REFERENCES regions(id));
+INSERT INTO regions VALUES (1,'W'),(2,'E'),(3,'M');
+INSERT INTO stores VALUES (1,'Alpha',1),(2,'Bravo',2),(3,'Charlie',3);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE regions (id INTEGER PRIMARY KEY, code TEXT);
+CREATE TABLE stores (id INTEGER PRIMARY KEY, name TEXT, region_id INTEGER REFERENCES regions(id));
+INSERT INTO regions VALUES (1,'W'),(2,'E'),(3,'M');
+INSERT INTO stores VALUES (1,'Alpha',1),(2,'Bravo',2),(3,'Charlie',3);`,
+      "SELECT name FROM stores WHERE region_id IN (SELECT id FROM regions WHERE code IN ('W','E')) ORDER BY name",
+      false,
+      "Alpha, Bravo."
+    ) });
+
+  L({ id: "p-exists", kind: "practice", title: "Practice: EXISTS", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>customers</code> and <code>orders</code>. Select <code>name</code> from customers such that <strong>there exists</strong> an order with <code>amount &gt; 50</code> for that customer. Order by <code>name</code>.</p>
+`, seed: `
+CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id), amount REAL);
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben');
+INSERT INTO orders VALUES (1,1,40),(2,1,60),(3,2,30);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id), amount REAL);
+INSERT INTO customers VALUES (1,'Ann'),(2,'Ben');
+INSERT INTO orders VALUES (1,1,40),(2,1,60),(3,2,30);`,
+      "SELECT c.name FROM customers c WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.amount > 50) ORDER BY c.name",
+      false,
+      "Ann only."
+    ) });
+
+  L({ id: "p-cte", kind: "practice", title: "Practice: WITH (CTE)", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>tx</code> (<code>acct</code>, <code>amt</code>). Use a <code>WITH</code> CTE named <code>neg</code> that selects from <code>tx</code> where <code>amt &lt; 0</code>, then <code>SELECT acct, SUM(amt) AS debt FROM neg GROUP BY acct ORDER BY acct</code> as the outer query (can be one statement).</p>
+`, seed: `CREATE TABLE tx (acct TEXT, amt REAL);
+INSERT INTO tx VALUES ('a',10),('a',-3),('b',-5),('b',-2);`,
+    starter: "WITH neg AS (\n  SELECT * FROM tx WHERE amt < 0\n)\n",
+    validate: checkSelect(
+      `CREATE TABLE tx (acct TEXT, amt REAL);
+INSERT INTO tx VALUES ('a',10),('a',-3),('b',-5),('b',-2);`,
+      "WITH neg AS (SELECT * FROM tx WHERE amt < 0) SELECT acct, SUM(amt) AS debt FROM neg GROUP BY acct ORDER BY acct",
+      false,
+      "a/-3 and b/-7."
+    ) });
+
+  L({ id: "ch8", kind: "challenge", title: "Mini-lab: anti-join report (solo)", narrative: `
+<h2>Unit 8 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Tables <code>accounts</code> (<code>id</code> integer PK, <code>email</code> text not null unique) and <code>logins</code> (<code>id</code> integer PK, <code>account_id</code> integer not null references accounts, <code>day</code> text not null).</li>
+<li>At least <strong>5</strong> accounts and <strong>4</strong> logins (not every account must have a login).</li>
+<li>View <code>v_never_logged_in</code>: single column <code>email</code> for accounts with <strong>no</strong> login rows, ordered by <code>email</code>.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    for (const n of ["accounts", "logins"]) {
+      const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" + n + "'");
+      if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (db.exec("SELECT COUNT(*) FROM accounts")[0].values[0][0] < 5) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM logins")[0].values[0][0] < 4) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_never_logged_in'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(`
+SELECT a.email AS email FROM accounts a
+WHERE NOT EXISTS (SELECT 1 FROM logins l WHERE l.account_id = a.id)
+ORDER BY email
+`);
+    let got;
+    try {
+      got = db.exec("SELECT email FROM v_never_logged_in ORDER BY email");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-union-null", kind: "learn", title: "UNION, UNION ALL, COALESCE", narrative: `
+<h2>Combining result sets</h2>
+<p><code>UNION</code> deduplicates; <code>UNION ALL</code> keeps duplicates and is faster when you know sets don’t overlap.</p>
+<h2>Cleaning NULL and blanks</h2>
+<p><code>COALESCE(a,b,c)</code> returns the first non-null argument. <code>NULLIF(x,y)</code> returns NULL if <code>x = y</code>, else <code>x</code> — handy to turn sentinel values into NULL before aggregating.</p>
+` });
+
+  L({ id: "p-union-coalesce", kind: "practice", title: "Practice: UNION + COALESCE", narrative: `
+<h2>Task</h2>
+<p>Same pattern as earlier course: seeded <code>primary_emails</code> and <code>backup_emails</code>. Produce <code>user_id</code> and <code>email</code> where blank strings become <code>'missing'</code> via <code>COALESCE(NULLIF(email,''), 'missing')</code>, sorted by <code>user_id</code>, <code>email</code>.</p>
+`, seed: `
+CREATE TABLE primary_emails (user_id INTEGER, email TEXT);
+CREATE TABLE backup_emails (user_id INTEGER, email TEXT);
+INSERT INTO primary_emails VALUES (1,'a@x'),(2,'');
+INSERT INTO backup_emails VALUES (2,'b@x'),(3,NULL);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE primary_emails (user_id INTEGER, email TEXT);
+CREATE TABLE backup_emails (user_id INTEGER, email TEXT);
+INSERT INTO primary_emails VALUES (1,'a@x'),(2,'');
+INSERT INTO backup_emails VALUES (2,'b@x'),(3,NULL);`,
+      `WITH combined AS (
+  SELECT user_id, email FROM primary_emails
+  UNION
+  SELECT user_id, email FROM backup_emails
+)
+SELECT user_id, COALESCE(NULLIF(email,''), 'missing') AS email
+FROM combined ORDER BY user_id, email`,
+      false,
+      "Four rows: (1,a@x), (2,b@x), (2,missing), (3,missing)."
+    ) });
+
+  L({ id: "ch9", kind: "challenge", title: "Mini-lab: merged directory (solo)", narrative: `
+<h2>Unit 9 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Tables <code>internal_dir</code> (<code>id</code> integer PK, <code>phone</code> text) and <code>external_dir</code> (<code>id</code> integer PK, <code>phone</code> text).</li>
+<li>Insert at least <strong>3</strong> rows in each table (any ids/phones).</li>
+<li>View <code>v_all_phones</code>: one column <code>phone</code> — <code>UNION</code> (not ALL) of both directories’ phones, sorted ascending. Duplicates that appear in both tables should appear once.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const a = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='internal_dir'");
+    const b = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='external_dir'");
+    if (!a.length || !a[0].values.length || !b.length || !b[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM internal_dir")[0].values[0][0] < 3) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM external_dir")[0].values[0][0] < 3) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_all_phones'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT phone FROM (SELECT phone FROM internal_dir UNION SELECT phone FROM external_dir) ORDER BY phone"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT phone FROM v_all_phones ORDER BY phone");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-constraints", kind: "learn", title: "CHECK, UNIQUE, and data rules", narrative: `
+<h2>Beyond NOT NULL</h2>
+<p><code>CHECK (expression)</code> rejects inserts/updates that make the expression false. Use it for ranges (<code>price &gt;= 0</code>), allowed sets (<code>status IN ('a','b')</code>), or cross-column rules (<code>end_date &gt;= start_date</code>).</p>
+<h2>UNIQUE</h2>
+<p>A <code>UNIQUE</code> constraint on one or more columns forbids duplicate combinations — the database enforces “this value (or tuple) can only appear once.” Primary keys are unique by definition.</p>
+<h2>When rules live in SQL</h2>
+<p>App-level validation is still important for UX, but database constraints are the last line of defense when multiple apps or scripts touch the same data.</p>
+` });
+
+  L({ id: "learn-indexes", kind: "learn", title: "Indexes and how queries use them", narrative: `
+<h2>What an index does</h2>
+<p>A <strong>B-tree index</strong> is a separate structure that speeds up lookups and sorts on chosen columns — at the cost of extra storage and slightly slower writes (the index must be maintained).</p>
+<pre>CREATE INDEX idx_orders_customer ON orders(customer_id);</pre>
+<h2>Composite indexes</h2>
+<p><code>CREATE INDEX idx ON t(a, b)</code> helps queries that filter or sort on <code>a</code>, or on <code>a</code> and <code>b</code> together. Column order matters: leading prefix rules apply.</p>
+<h2>EXPLAIN QUERY PLAN</h2>
+<p>In SQLite, <code>EXPLAIN QUERY PLAN SELECT …</code> shows whether the optimizer can use an index (look for <code>USING INDEX</code>). It is a habit worth building when tuning slow reports.</p>
+` });
+
+  L({ id: "p-check-constraint", kind: "practice", title: "Practice: CHECK constraint", narrative: `
+<h2>Task</h2>
+<p>From an empty DB, create table <code>person</code> with <code>id</code> integer primary key and <code>age</code> integer with <code>CHECK (age &gt;= 0 AND age &lt;= 130)</code>. Insert at least one valid row (any age in range).</p>
+`, seed: "", starter: "", validate(db) {
+    try {
+      db.exec("INSERT INTO person(age) VALUES (-1)");
+      return { ok: false, msg: "Database accepted age -1 — tighten your CHECK." };
+    } catch (_) {}
+    const c = db.exec("SELECT COUNT(*) FROM person")[0].values[0][0];
+    if (c < 1) return { ok: false, msg: "Insert at least one valid person." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-unique-constraint", kind: "practice", title: "Practice: UNIQUE constraint", narrative: `
+<h2>Task</h2>
+<p>Create <code>accounts</code> with <code>id</code> integer PK and <code>handle</code> text <strong>not null unique</strong>. Insert one row with handle <code>'ada'</code>.</p>
+`, seed: "", starter: "", validate(db) {
+    try {
+      db.exec("INSERT INTO accounts(handle) VALUES ('ada')");
+      return { ok: false, msg: "Duplicate handle should be rejected." };
+    } catch (_) {}
+    const c = db.exec("SELECT COUNT(*) FROM accounts WHERE handle = 'ada'")[0].values[0][0];
+    if (c !== 1) return { ok: false, msg: "Keep exactly one row with handle ada." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-create-index", kind: "practice", title: "Practice: CREATE INDEX", narrative: `
+<h2>Task</h2>
+<p>Seed creates table <code>hits</code> with columns <code>id</code>, <code>path</code>, <code>ts</code>. Create an index named exactly <code>idx_hits_ts</code> on column <code>ts</code> (ascending is default).</p>
+`, seed: `CREATE TABLE hits (id INTEGER PRIMARY KEY, path TEXT, ts INTEGER);
+INSERT INTO hits(path, ts) VALUES ('/',1),('/a',2),('/b',3);`, starter: "", validate(db) {
+    const lst = db.exec("PRAGMA index_list(hits)");
+    if (!lst.length) return { ok: false, msg: "No index on hits." };
+    const names = (lst[0].values || []).map((r) => r[1]);
+    if (!names.includes("idx_hits_ts")) return { ok: false, msg: "Need index named idx_hits_ts on hits(ts)." };
+    return { ok: true };
+  } });
+
+  L({ id: "ch11", kind: "challenge", title: "Mini-lab: priced catalog (solo)", narrative: `
+<h2>Unit 11 mini-lab</h2>
+<p class="no-hint">Empty database. Pass/fail only.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>sku</code>: <code>code</code> text primary key, <code>price</code> real not null, <code>qty</code> integer not null, with <code>CHECK (price &gt;= 0)</code> and <code>CHECK (qty &gt;= 0)</code>.</li>
+<li>Index <code>idx_sku_price</code> on <code>price</code>.</li>
+<li>At least <strong>6</strong> rows; at least <strong>two</strong> distinct <code>price</code> values.</li>
+<li>View <code>v_price_tier</code>: columns <code>code</code>, <code>tier</code> where <code>tier</code> is <code>'low'</code> if <code>price &lt; 10</code>, else <code>'high'</code>, ordered by <code>code</code>.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='sku'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    try {
+      db.exec("INSERT INTO sku(code, price, qty) VALUES ('bad', -1, 1)");
+      return { ok: false, msg: "Mini-lab check failed." };
+    } catch (_) {}
+    const idx = db.exec("PRAGMA index_list(sku)");
+    const nms = idx.length ? (idx[0].values || []).map((r) => r[1]) : [];
+    if (!nms.includes("idx_sku_price")) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM sku")[0].values[0][0] < 6) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(DISTINCT price) FROM sku")[0].values[0][0] < 2) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_price_tier'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT code, CASE WHEN price < 10 THEN 'low' ELSE 'high' END AS tier FROM sku ORDER BY code"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT code, tier FROM v_price_tier ORDER BY code");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-transactions", kind: "learn", title: "Transactions: BEGIN, COMMIT, ROLLBACK", narrative: `
+<h2>ACID in one connection</h2>
+<p>A <strong>transaction</strong> groups changes so they succeed together or not at all. In SQLite: <code>BEGIN;</code> (or <code>BEGIN TRANSACTION;</code>), then <code>COMMIT;</code> to persist or <code>ROLLBACK;</code> to discard.</p>
+<h2>Why it matters</h2>
+<p>Transferring money between accounts, posting a sale with line items, or bulk imports should not leave half-written state if something fails mid-way.</p>
+<h2>SAVEPOINT</h2>
+<p><code>SAVEPOINT name</code> / <code>ROLLBACK TO name</code> lets you nest partial rollbacks inside a larger transaction — useful in complex scripts.</p>
+` });
+
+  L({ id: "p-tx-rollback", kind: "practice", title: "Practice: ROLLBACK", narrative: `
+<h2>Task</h2>
+<p>Seed creates empty <code>buf</code> (<code>x</code> integer). Run a script that: starts a transaction, inserts <code>1</code> into <code>buf</code>, then <strong>rolls back</strong>. After your script, <code>buf</code> must contain <strong>zero</strong> rows.</p>
+`, seed: "CREATE TABLE buf (x INTEGER);", starter: "BEGIN;\n", validate(db) {
+    const c = db.exec("SELECT COUNT(*) FROM buf")[0].values[0][0];
+    if (c !== 0) return { ok: false, msg: "Table should be empty after rollback." };
+    return { ok: true };
+  } });
+
+  L({ id: "p-tx-commit", kind: "practice", title: "Practice: COMMIT two inserts", narrative: `
+<h2>Task</h2>
+<p>Seed: empty <code>pair</code> (<code>a</code> int, <code>b</code> int). In one transaction, insert two rows: (1,2) and (3,4), then commit. Final count must be 2.</p>
+`, seed: "CREATE TABLE pair (a INTEGER, b INTEGER);", starter: "BEGIN;\n", validate(db) {
+    const c = db.exec("SELECT COUNT(*) FROM pair")[0].values[0][0];
+    if (c !== 2) return { ok: false, msg: "Need exactly two rows after commit." };
+    return { ok: true };
+  } });
+
+  L({ id: "ch12", kind: "challenge", title: "Mini-lab: atomic batch (solo)", narrative: `
+<h2>Unit 12 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>batch_log</code>: <code>n</code> integer primary key (you may rely on explicit values 1..10).</li>
+<li>Inside <strong>one</strong> transaction, insert exactly <strong>10</strong> rows with <code>n</code> from 1 through 10 (inclusive), then <code>COMMIT</code>.</li>
+<li>No row with <code>n</code> outside 1–10.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='batch_log'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const c = db.exec("SELECT COUNT(*) FROM batch_log")[0].values[0][0];
+    if (c !== 10) return { ok: false, msg: "Mini-lab check failed." };
+    const bad = db.exec("SELECT COUNT(*) FROM batch_log WHERE n < 1 OR n > 10")[0].values[0][0];
+    if (bad > 0) return { ok: false, msg: "Mini-lab check failed." };
+    const dist = db.exec("SELECT COUNT(DISTINCT n) FROM batch_log")[0].values[0][0];
+    if (dist !== 10) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-case-datetime", kind: "learn", title: "CASE expressions & SQLite date/time", narrative: `
+<h2>Searched CASE</h2>
+<pre>SELECT name,
+  CASE
+    WHEN score >= 90 THEN 'A'
+    WHEN score >= 80 THEN 'B'
+    ELSE 'C'
+  END AS grade
+FROM exam;</pre>
+<h2>SQLite time functions</h2>
+<p><code>date('now')</code>, <code>datetime('now')</code>, <code>time('now')</code> return current moments (UTC unless modified). <code>strftime('%Y-%m', col)</code> formats or parses parts of date-like strings.</p>
+<p>Dates are often stored as ISO strings (<code>TEXT</code>) or as integers (Unix seconds) — pick one convention per project and document it.</p>
+` });
+
+  L({ id: "p-case-severity", kind: "practice", title: "Practice: CASE → labels", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>alerts</code> (<code>sev</code> integer). One <code>SELECT</code> returning <code>id</code> and <code>label</code>: <code>'crit'</code> if <code>sev &gt;= 3</code>, else <code>'info'</code>, ordered by <code>id</code>.</p>
+`, seed: `CREATE TABLE alerts (id INTEGER PRIMARY KEY, sev INTEGER);
+INSERT INTO alerts(sev) VALUES (1),(3),(2),(5);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE alerts (id INTEGER PRIMARY KEY, sev INTEGER);
+INSERT INTO alerts(sev) VALUES (1),(3),(2),(5);`,
+      "SELECT id, CASE WHEN sev >= 3 THEN 'crit' ELSE 'info' END AS label FROM alerts ORDER BY id",
+      false,
+      "Rows 1–4: info, crit, info, crit."
+    ) });
+
+  L({ id: "p-strftime-month", kind: "practice", title: "Practice: strftime", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>ev</code> (<code>day</code> text ISO dates). Select <code>day</code> and <code>m</code> where <code>m</code> is <code>strftime('%m', day)</code> (two-digit month), ordered by <code>day</code>.</p>
+`, seed: `CREATE TABLE ev (day TEXT);
+INSERT INTO ev VALUES ('2024-01-05'),('2024-03-20'),('2023-12-01');`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE ev (day TEXT);
+INSERT INTO ev VALUES ('2024-01-05'),('2024-03-20'),('2023-12-01');`,
+      "SELECT day, strftime('%m', day) AS m FROM ev ORDER BY day",
+      false,
+      "Months 01, 03, 12 for the three rows in date order."
+    ) });
+
+  L({ id: "ch13", kind: "challenge", title: "Mini-lab: dated tiers (solo)", narrative: `
+<h2>Unit 13 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>shipments</code>: <code>id</code> integer PK, <code>eta</code> text not null (store as <code>YYYY-MM-DD</code>).</li>
+<li>Insert at least <strong>5</strong> rows spanning at least <strong>two</strong> distinct calendar years (e.g. 2023 and 2024).</li>
+<li>View <code>v_ship_year</code>: columns <code>id</code>, <code>yr</code> where <code>yr</code> is the 4-digit year from <code>eta</code> via <code>strftime</code>, ordered by <code>id</code>.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='shipments'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM shipments")[0].values[0][0] < 5) return { ok: false, msg: "Mini-lab check failed." };
+    const y = db.exec("SELECT COUNT(DISTINCT strftime('%Y', eta)) FROM shipments")[0].values[0][0];
+    if (y < 2) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_ship_year'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(
+      "SELECT id, strftime('%Y', eta) AS yr FROM shipments ORDER BY id"
+    );
+    let got;
+    try {
+      got = db.exec("SELECT id, yr FROM v_ship_year ORDER BY id");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-windows", kind: "learn", title: "Window functions (OVER)", narrative: `
+<h2>What changes with windows</h2>
+<p>Normal aggregates collapse rows. <strong>Window functions</strong> compute a value <em>per row</em> using a “window” of related rows: <code>PARTITION BY</code> splits groups, <code>ORDER BY</code> inside <code>OVER</code> defines order for ranking or running totals.</p>
+<pre>SELECT
+  region,
+  amount,
+  ROW_NUMBER() OVER (PARTITION BY region ORDER BY amount DESC) AS rn
+FROM sales;</pre>
+<h2>Common functions</h2>
+<p><code>ROW_NUMBER()</code>, <code>RANK()</code>, <code>DENSE_RANK()</code>, <code>SUM(x) OVER (...)</code>, <code>LAG(col)</code> / <code>LEAD(col)</code> — availability matches your SQLite version (sql.js ships a recent SQLite).</p>
+` });
+
+  L({ id: "p-row-number-partition", kind: "practice", title: "Practice: ROW_NUMBER per group", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>scores</code> (<code>team</code>, <code>pts</code>). Return <code>team</code>, <code>pts</code>, <code>rn</code> where <code>rn</code> is <code>ROW_NUMBER()</code> over <code>PARTITION BY team ORDER BY pts DESC</code>, then order result by <code>team</code>, <code>rn</code>.</p>
+`, seed: `CREATE TABLE scores (team TEXT, pts INTEGER);
+INSERT INTO scores VALUES ('A',10),('A',20),('B',5),('B',15),('B',12);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE scores (team TEXT, pts INTEGER);
+INSERT INTO scores VALUES ('A',10),('A',20),('B',5),('B',15),('B',12);`,
+      "SELECT team, pts, ROW_NUMBER() OVER (PARTITION BY team ORDER BY pts DESC) AS rn FROM scores ORDER BY team, rn",
+      false,
+      "A: 20/1 then 10/2; B: 15/1, 12/2, 5/3."
+    ) });
+
+  L({ id: "p-sum-over-order", kind: "practice", title: "Practice: running SUM", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>daily</code> (<code>day</code> int, <code>amt</code> int). Select <code>day</code>, <code>amt</code>, <code>run</code> where <code>run</code> is <code>SUM(amt) OVER (ORDER BY day ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code>, ordered by <code>day</code>.</p>
+`, seed: `CREATE TABLE daily (day INTEGER, amt INTEGER);
+INSERT INTO daily VALUES (1,3),(2,5),(3,2);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE daily (day INTEGER, amt INTEGER);
+INSERT INTO daily VALUES (1,3),(2,5),(3,2);`,
+      "SELECT day, amt, SUM(amt) OVER (ORDER BY day ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run FROM daily ORDER BY day",
+      false,
+      "Running totals 3, 8, 10."
+    ) });
+
+  L({ id: "ch14", kind: "challenge", title: "Mini-lab: top two per group (solo)", narrative: `
+<h2>Unit 14 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>sales</code>: <code>id</code> integer PK, <code>region</code> text not null, <code>amt</code> real not null.</li>
+<li>At least <strong>8</strong> rows and <strong>at least 3</strong> distinct <code>region</code> values.</li>
+<li>View <code>v_top2</code>: columns <code>region</code>, <code>amt</code>, <code>rn</code> — only rows where <code>rn</code> is the row number per <code>region</code> ordered by <code>amt</code> descending (i.e. top two amounts per region). Same rows as filtering <code>ROW_NUMBER() ... &lt;= 2</code> in a subquery or CTE.</li>
+<li>Order inside the view definition is not graded; compare against truth ordered by <code>region</code>, <code>rn</code>.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM sales")[0].values[0][0] < 8) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(DISTINCT region) FROM sales")[0].values[0][0] < 3) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_top2'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(`
+SELECT region, amt, rn FROM (
+  SELECT region, amt,
+    ROW_NUMBER() OVER (PARTITION BY region ORDER BY amt DESC) AS rn
+  FROM sales
+) WHERE rn <= 2 ORDER BY region, rn
+`);
+    let got;
+    try {
+      got = db.exec("SELECT region, amt, rn FROM v_top2 ORDER BY region, rn");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-upsert", kind: "learn", title: "UPSERT: ON CONFLICT in SQLite", narrative: `
+<h2>Conflicting inserts</h2>
+<p>When a row would violate <code>UNIQUE</code> or <code>PRIMARY KEY</code>, SQLite can <code>ON CONFLICT … DO NOTHING</code> (skip) or <code>DO UPDATE SET …</code> (merge) — often called “upsert.”</p>
+<pre>INSERT INTO counters(k, v) VALUES ('hits', 1)
+ON CONFLICT(k) DO UPDATE SET v = v + 1;</pre>
+<p><code>INSERT OR REPLACE</code> deletes and reinserts the row, which can reset columns you did not specify — prefer <code>ON CONFLICT</code> when you need fine control.</p>
+` });
+
+  L({ id: "p-on-conflict-update", kind: "practice", title: "Practice: ON CONFLICT DO UPDATE", narrative: `
+<h2>Task</h2>
+<p>Seed creates <code>kv</code> (<code>k</code> text primary key, <code>v</code> integer). Your script must: insert ('x',1). Then run an <code>INSERT … ON CONFLICT(k) DO UPDATE SET v = v + 10</code> that targets key <code>'x'</code> so final <code>v</code> for <code>'x'</code> is <strong>11</strong>.</p>
+`, seed: "CREATE TABLE kv (k TEXT PRIMARY KEY, v INTEGER);", starter: "INSERT INTO kv VALUES ('x', 1);\n", validate(db) {
+    const v = db.exec("SELECT v FROM kv WHERE k = 'x'")[0].values[0][0];
+    if (v !== 11) return { ok: false, msg: "Final v for x should be 11." };
+    return { ok: true };
+  } });
+
+  L({ id: "ch15", kind: "challenge", title: "Mini-lab: idempotent counter (solo)", narrative: `
+<h2>Unit 15 mini-lab</h2>
+<p class="no-hint">Empty DB.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>counters</code>: <code>name</code> text primary key, <code>n</code> integer not null.</li>
+<li>Run a script that (in order): upserts so <code>page_a</code> ends with <code>n = 1</code>; then upserts again so <code>page_a</code> becomes <code>n = 2</code>; inserts <code>page_b</code> with <code>n = 5</code>. Use <code>ON CONFLICT</code> (not <code>OR REPLACE</code> alone).</li>
+<li>Final two rows: <code>page_a</code>/2 and <code>page_b</code>/5.</li>
+</ol>
+`, seed: "", starter: "", validate(db) {
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='counters'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const r = db.exec("SELECT name, n FROM counters ORDER BY name");
+    const exp = { columns: ["name", "n"], values: [["page_a", 2], ["page_b", 5]] };
+    if (!resultMatch(r, [exp], false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "learn-self-join", kind: "learn", title: "Self-joins & reporting hierarchies", narrative: `
+<h2>Same table, two roles</h2>
+<p>Join a table to itself with different aliases — classic pattern for employees and managers (<code>staff m</code> for manager, <code>staff e</code> for employee), or for parts and substitute parts.</p>
+<pre>SELECT e.name, m.name AS manager
+FROM employees e
+LEFT JOIN employees m ON m.id = e.manager_id;</pre>
+<h2>Graphs and trees</h2>
+<p>Deep org charts are often better in application code or graph databases, but shallow hierarchies fit SQL self-joins well. For arbitrary depth in SQLite, <strong>recursive CTEs</strong> (<code>WITH RECURSIVE</code>) walk trees — worth studying after you are solid on joins.</p>
+` });
+
+  L({ id: "p-self-join-mgr", kind: "practice", title: "Practice: employee ↔ manager", narrative: `
+<h2>Task</h2>
+<p>Seeded <code>emp</code> (<code>id</code>, <code>name</code>, <code>mgr_id</code> nullable references emp). Return columns <code>name</code> and <code>boss</code> (manager’s name, null if no manager), ordered by <code>id</code>.</p>
+`, seed: `CREATE TABLE emp (id INTEGER PRIMARY KEY, name TEXT, mgr_id INTEGER REFERENCES emp(id));
+INSERT INTO emp VALUES (1,'CEO',NULL),(2,'Lead',1),(3,'IC',2);`,
+    starter: "",
+    validate: checkSelect(
+      `CREATE TABLE emp (id INTEGER PRIMARY KEY, name TEXT, mgr_id INTEGER REFERENCES emp(id));
+INSERT INTO emp VALUES (1,'CEO',NULL),(2,'Lead',1),(3,'IC',2);`,
+      "SELECT e.name AS name, m.name AS boss FROM emp e LEFT JOIN emp m ON m.id = e.mgr_id ORDER BY e.id",
+      false,
+      "CEO/NULL, Lead/CEO, IC/Lead."
+    ) });
+
+  L({ id: "ch16", kind: "challenge", title: "Mini-lab: flat org chart (solo)", narrative: `
+<h2>Unit 16 mini-lab</h2>
+<p class="no-hint">Empty DB. <code>PRAGMA foreign_keys = ON;</code> recommended.</p>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li>Table <code>person</code>: <code>id</code> integer PK, <code>label</code> text not null, <code>reports_to</code> integer null references <code>person(id)</code>.</li>
+<li>At least <strong>5</strong> people; exactly <strong>one</strong> row has <code>reports_to</code> null (the root).</li>
+<li>View <code>v_flat</code>: columns <code>id</code>, <code>label</code>, <code>mgr_label</code> — person id, their name, manager’s <code>label</code> (null for root). Checker compares ordered by <code>id</code>.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='person'");
+    if (!t.length || !t[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    if (db.exec("SELECT COUNT(*) FROM person")[0].values[0][0] < 5) return { ok: false, msg: "Mini-lab check failed." };
+    const roots = db.exec("SELECT COUNT(*) FROM person WHERE reports_to IS NULL")[0].values[0][0];
+    if (roots !== 1) return { ok: false, msg: "Mini-lab check failed." };
+    const v = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_flat'");
+    if (!v.length || !v[0].values.length) return { ok: false, msg: "Mini-lab check failed." };
+    const truth = db.exec(`
+SELECT p.id AS id, p.label AS label, m.label AS mgr_label
+FROM person p
+LEFT JOIN person m ON m.id = p.reports_to
+ORDER BY p.id
+`);
+    let got;
+    try {
+      got = db.exec("SELECT id, label, mgr_label FROM v_flat ORDER BY id");
+    } catch (_) {
+      return { ok: false, msg: "Mini-lab check failed." };
+    }
+    if (!resultMatch(got, truth, false)) return { ok: false, msg: "Mini-lab check failed." };
+    return { ok: true };
+  } });
+
+  L({ id: "capstone", kind: "project", title: "Capstone: school enrollment (solo)", narrative: `
+<h2>Final project — on your own</h2>
+<p class="no-hint">No hints beyond this list. Combines schema, data, joins, aggregates, and views.</p>
+<h3>Requirements</h3>
+<ol style="color:#c5ced9;font-size:0.92rem">
+<li><code>PRAGMA foreign_keys = ON;</code></li>
+<li>Tables <code>students</code> (<code>id</code> integer PK, <code>full_name</code> text not null, <code>enrolled_date</code> text), <code>courses</code> (<code>id</code> integer PK, <code>title</code> text not null, <code>credits</code> integer not null), <code>enrollments</code> (<code>student_id</code> references students, <code>course_id</code> references courses, <code>grade</code> text nullable, primary key <code>(student_id, course_id)</code>).</li>
+<li>At least 4 students, 3 courses, 6 enrollments; ≥2 grades NULL; ≥3 grades are numeric text like <code>'88'</code>.</li>
+<li>View <code>v_student_course_counts</code>: <code>student_name</code>, <code>course_count</code> — enrollments per student including zeros.</li>
+<li>View <code>v_course_avg_grade</code>: <code>title</code>, <code>avg_grade</code> — average <code>CAST(grade AS REAL)</code> for non-null grades, by course; only courses with ≥1 graded enrollment.</li>
+<li>Full script runs without errors.</li>
+</ol>
+`, seed: "", starter: "PRAGMA foreign_keys = ON;\n\n", validate(db) {
+    try { db.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    const need = ["students", "courses", "enrollments"];
+    for (const n of need) {
+      const t = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" + n + "'");
+      if (!t.length || !t[0].values.length) return { ok: false, msg: "Capstone check failed (schema)." };
+    }
+    const fk = db.exec("PRAGMA foreign_key_list(enrollments)");
+    if (!fk.length || fk[0].values.length < 2) return { ok: false, msg: "Capstone check failed (relationships)." };
+    const pk = db.exec("PRAGMA table_info(enrollments)");
+    const rows = pk[0].values || [];
+    const cols = rows.map((r) => r[1]);
+    if (!cols.includes("student_id") || !cols.includes("course_id") || !cols.includes("grade")) return { ok: false, msg: "Capstone check failed (enrollments columns)." };
+    const pkCols = rows.filter((r) => r[5] > 0);
+    if (pkCols.length < 2) return { ok: false, msg: "Capstone check failed (composite key on enrollments)." };
+    const cStu = db.exec("SELECT COUNT(*) FROM students")[0].values[0][0];
+    const cCou = db.exec("SELECT COUNT(*) FROM courses")[0].values[0][0];
+    const cEnr = db.exec("SELECT COUNT(*) FROM enrollments")[0].values[0][0];
+    if (cStu < 4 || cCou < 3 || cEnr < 6) return { ok: false, msg: "Capstone check failed (minimum data)." };
+    const nullGrades = db.exec("SELECT COUNT(*) FROM enrollments WHERE grade IS NULL")[0].values[0][0];
+    const numGrades = db.exec("SELECT COUNT(*) FROM enrollments WHERE grade GLOB '*[0-9]*' AND grade IS NOT NULL")[0].values[0][0];
+    if (nullGrades < 2 || numGrades < 3) return { ok: false, msg: "Capstone check failed (grade pattern rules)." };
+    const v1 = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_student_course_counts'");
+    const v2 = db.exec("SELECT name FROM sqlite_master WHERE type='view' AND name='v_course_avg_grade'");
+    if (!v1.length || !v1[0].values.length || !v2.length || !v2[0].values.length) return { ok: false, msg: "Capstone check failed (views missing)." };
+    const truthCounts = db.exec(`
+SELECT s.full_name AS student_name,
+       (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = s.id) AS course_count
+FROM students s
+ORDER BY student_name
+`);
+    const gotCounts = db.exec("SELECT student_name, course_count FROM v_student_course_counts ORDER BY student_name");
+    if (!resultMatch(gotCounts, truthCounts, false)) return { ok: false, msg: "Capstone check failed (v_student_course_counts)." };
+    const truthAvg = db.exec(`
+SELECT c.title AS title,
+       printf("%.6f", AVG(CAST(e.grade AS REAL))) AS avg_grade
+FROM courses c
+JOIN enrollments e ON e.course_id = c.id
+WHERE e.grade IS NOT NULL
+GROUP BY c.id, c.title
+HAVING COUNT(e.grade) >= 1
+ORDER BY title
+`);
+    const gotAvg = db.exec(`
+SELECT title, printf("%.6f", avg_grade) AS avg_grade
+FROM v_course_avg_grade
+ORDER BY title
+`);
+    if (!resultMatch(gotAvg, truthAvg, false)) return { ok: false, msg: "Capstone check failed (v_course_avg_grade)." };
+    return { ok: true };
+  } });
+
+  function lessonLocked(i) {
+    if (i === 0) return false;
+    const prev = LESSONS[i - 1];
+    return !progress.done[prev.id];
+  }
+
+  function renderNav() {
+    const units = [
+      { name: "1 · Foundations & DDL", range: [0, 7] },
+      { name: "2 · Filtering rows", range: [8, 12] },
+      { name: "3 · Sorting & NULL", range: [13, 16] },
+      { name: "4 · Changing data", range: [17, 20] },
+      { name: "5 · Keys & relations", range: [21, 24] },
+      { name: "6 · JOINs", range: [25, 29] },
+      { name: "7 · Aggregates", range: [30, 33] },
+      { name: "8 · Subqueries & CTEs", range: [34, 38] },
+      { name: "9 · UNION & cleanup", range: [39, 41] },
+      { name: "10 · Constraints & indexes", range: [42, 47] },
+      { name: "11 · Transactions", range: [48, 51] },
+      { name: "12 · CASE & dates", range: [52, 55] },
+      { name: "13 · Window functions", range: [56, 59] },
+      { name: "14 · Upsert", range: [60, 62] },
+      { name: "15 · Self-joins", range: [63, 65] },
+      { name: "16 · Capstone", range: [66, 66] },
+    ];
+    let html = "";
+    for (const u of units) {
+      html += `<div class="unit"><div class="unit-title">${escapeHtml(u.name)}</div>`;
+      for (let i = u.range[0]; i <= u.range[1]; i++) {
+        const Ls = LESSONS[i];
+        const locked = lessonLocked(i);
+        const done = !!progress.done[Ls.id];
+        html += `<button type="button" class="lesson-btn ${i === currentLessonIndex ? "active" : ""} ${done ? "done" : ""} ${locked ? "locked" : ""}" data-i="${i}" ${locked ? "disabled" : ""}>
+          <span class="idx">${i + 1}</span><span class="dot"></span>
+          <span class="lbl">${escapeHtml(Ls.title)}</span>
+          <span class="tag ${Ls.kind === "challenge" ? "challenge" : ""}">${Ls.kind === "learn" ? "learn" : Ls.kind === "project" ? "capstone" : Ls.kind === "challenge" ? "mini-lab" : "practice"}</span>
+        </button>`;
+      }
+      html += `</div>`;
+    }
+    el.nav.innerHTML = html;
+    el.nav.querySelectorAll(".lesson-btn:not(.locked)").forEach((b) => {
+      b.addEventListener("click", () => goLesson(+b.getAttribute("data-i")));
+    });
+  }
+
+  function updateChrome() {
+    const total = LESSONS.length;
+    const doneCount = LESSONS.filter((l) => progress.done[l.id]).length;
+    el.progressFill.style.width = Math.round((doneCount / total) * 100) + "%";
+    el.xpFill.style.width = Math.min(100, (progress.xp / (total * XP_PER)) * 100) + "%";
+    el.xpLabel.textContent = progress.xp + " XP · " + doneCount + "/" + total + " complete";
+  }
+
+  function goLesson(i) {
+    if (i < 0 || i >= LESSONS.length) return;
+    if (lessonLocked(i)) return;
+    currentLessonIndex = i;
+    const Ls = LESSONS[i];
+    el.title.textContent = Ls.title;
+    el.teach.innerHTML = Ls.narrative;
+    el.input.value = Ls.starter || "";
+    el.footerHint.textContent =
+      Ls.kind === "learn"
+        ? "Read the lesson, then press Continue."
+        : Ls.kind === "project" || Ls.kind === "challenge"
+          ? "Solo work: follow the instructions only. The checker will not teach the answer."
+          : "Write SQL, Run to experiment, Check to validate.";
+    document.body.classList.toggle("learn-only", Ls.kind === "learn");
+    document.body.classList.toggle("project-final", Ls.kind === "project" || Ls.kind === "challenge");
+    el.btnContinue.style.display = Ls.kind === "learn" ? "inline-flex" : "none";
+    el.btnCheck.style.display = Ls.kind === "learn" ? "none" : "inline-flex";
+    clearOut();
+    setStatus("Ready");
+    freshLessonDb(Ls.seed || "");
+    progress.currentIndex = i;
+    saveProgress();
+    renderNav();
+    updateChrome();
+    el.sidebar.classList.remove("open");
+  }
+
+  function runOnLessonDb(sql, append) {
+    if (!append) clearOut();
+    const trimmed = sql.trim();
+    if (!trimmed) {
+      appendOut("<div class='msg info'>Nothing to run.</div>");
+      return;
+    }
+    try {
+      const results = lessonDb.exec(trimmed);
+      if (results.length === 0) appendOut("<div class='msg ok'>OK (no result set).</div>");
+      else for (const b of results) appendOut(renderTable(b));
+      setStatus("Ran · " + new Date().toLocaleTimeString());
+    } catch (e) {
+      appendOut("<div class='msg err'>" + escapeHtml(e.message || String(e)) + "</div>");
+      setStatus("Error");
+    }
+  }
+
+  function buildDbFromUserScript(seed, userSql) {
+    const d = new SQL.Database();
+    try { d.exec("PRAGMA foreign_keys = ON;"); } catch (_) {}
+    if (seed && seed.trim()) d.exec(seed);
+    d.exec(userSql);
+    return d;
+  }
+
+  function checkPractice() {
+    const Ls = LESSONS[currentLessonIndex];
+    if (Ls.kind === "learn") return;
+    clearOut();
+    const userSql = el.input.value.trim();
+    if (!userSql) {
+      appendOut("<div class='msg err'>Write some SQL first.</div>");
+      return;
+    }
+    let testDb;
+    try {
+      testDb = buildDbFromUserScript(Ls.seed || "", userSql);
+    } catch (e) {
+      appendOut("<div class='msg err'>" + escapeHtml(e.message || String(e)) + "</div>");
+      setStatus("Error");
+      return;
+    }
+    let res;
+    try {
+      res = Ls.validate(testDb);
+    } catch (e) {
+      res = {
+        ok: false,
+        msg:
+          Ls.kind === "project" || Ls.kind === "challenge"
+            ? "Check failed — re-read the requirements."
+            : e.message || String(e),
+      };
+    }
+    try { testDb.close(); } catch (_) {}
+
+    if (!res.ok) {
+      appendOut("<div class='msg err'>" + escapeHtml(res.msg) + "</div>");
+      setStatus("Try again");
+      return;
+    }
+    appendOut("<div class='msg ok'><strong>Correct!</strong> Lesson complete.</div>");
+    setStatus("Solved");
+    if (!progress.done[Ls.id]) {
+      progress.done[Ls.id] = true;
+      progress.xp += XP_PER;
+      saveProgress();
+      toast("+" + XP_PER + " XP");
+    }
+    renderNav();
+    updateChrome();
+  }
+
+  el.btnRun.addEventListener("click", () => runOnLessonDb(el.input.value, false));
+  el.btnClear.addEventListener("click", () => { el.input.value = ""; el.input.focus(); });
+  el.btnReset.addEventListener("click", () => {
+    const Ls = LESSONS[currentLessonIndex];
+    freshLessonDb(Ls.seed || "");
+    clearOut();
+    appendOut("<div class='msg ok'>Lesson database reset.</div>");
+    setStatus("Ready");
+  });
+  el.btnCheck.addEventListener("click", checkPractice);
+  el.btnContinue.addEventListener("click", () => {
+    const Ls = LESSONS[currentLessonIndex];
+    if (Ls.kind !== "learn") return;
+    if (!progress.done[Ls.id]) {
+      progress.done[Ls.id] = true;
+      progress.xp += XP_PER;
+      saveProgress();
+      toast("+" + XP_PER + " XP");
+    }
+    if (currentLessonIndex + 1 < LESSONS.length) goLesson(currentLessonIndex + 1);
+    else toast("Course complete!");
+    renderNav();
+    updateChrome();
+  });
+
+  const INDENT = "  ";
+
+  el.input.addEventListener("keydown", (ev) => {
+    if (ev.key === "Tab") {
+      ev.preventDefault();
+      const ta = el.input;
+      const val = ta.value;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      if (ev.shiftKey) {
+        const before = val.slice(0, start);
+        const sel = val.slice(start, end);
+        const after = val.slice(end);
+        const lines = sel.split("\n");
+        const out = lines
+          .map((line) => {
+            if (line.startsWith(INDENT)) return line.slice(INDENT.length);
+            if (line.startsWith("\t")) return line.slice(1);
+            return line;
+          })
+          .join("\n");
+        ta.value = before + out + after;
+        ta.selectionStart = start;
+        ta.selectionEnd = start + out.length;
+      } else {
+        if (start === end) {
+          ta.value = val.slice(0, start) + INDENT + val.slice(end);
+          ta.selectionStart = ta.selectionEnd = start + INDENT.length;
+        } else {
+          const before = val.slice(0, start);
+          const sel = val.slice(start, end);
+          const after = val.slice(end);
+          const out = sel.split("\n").map((line) => INDENT + line).join("\n");
+          ta.value = before + out + after;
+          ta.selectionStart = start;
+          ta.selectionEnd = start + out.length;
+        }
+      }
+      return;
+    }
+    if (ev.key === "Enter" && ev.ctrlKey && ev.shiftKey) {
+      ev.preventDefault();
+      checkPractice();
+    } else if (ev.key === "Enter" && ev.ctrlKey) {
+      ev.preventDefault();
+      runOnLessonDb(el.input.value, false);
+    }
+  });
+
+  el.menuToggle.addEventListener("click", () => el.sidebar.classList.toggle("open"));
+
+  initSqlJs({
+    locateFile: (f) => "https://cdn.jsdelivr.net/npm/sql.js@1.11.0/dist/" + f,
+  }).then((Module) => {
+    SQL = Module;
+    loadProgress();
+    renderNav();
+    let idx = progress.currentIndex;
+    if (idx < 0 || idx >= LESSONS.length) idx = 0;
+    if (lessonLocked(idx)) {
+      const first = LESSONS.findIndex((_, i) => !lessonLocked(i));
+      idx = first >= 0 ? first : 0;
+    }
+    goLesson(idx);
+  }).catch((err) => {
+    el.teach.innerHTML = "<p>Could not load sql.js: " + escapeHtml(err.message) + "</p>";
+  });
+})();
+  </script>
+</body>
+</html>
